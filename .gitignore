@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.ipynb_checkpoints/
+.env
+*.log
+mlruns/
+!mlruns/models/
+data/processed/
+data/predictions/
+*.parquet
+*.joblib
+.claude/

@@ -1,0 +1,38 @@
+project:
+  name: uk_road_collision_platform
+  version: "1.0.0"
+
+paths:
+  raw_data_dir: data/raw
+  processed_data_dir: data/processed
+  predictions_dir: data/predictions
+  models_dir: mlruns
+  raw_collision: dft-road-casualty-statistics-collision-2024_raw_data.csv
+  raw_casualty: dft-road-casualty-statistics-casualty-2024.csv
+  raw_vehicle: dft-road-casualty-statistics-vehicle-2024.csv
+
+etl:
+  missing_code: -1
+  date_format: "%d/%m/%Y"
+  output_format: parquet
+  validate_schema: true
+
+model:
+  target: collision_severity
+  test_size: 0.2
+  random_state: 42
+  cv_folds: 5
+  scoring: f1_weighted
+
+geo:
+  dbscan_eps_km: 0.5
+  dbscan_min_samples: 5
+  h3_resolution: 7
+
+serving:
+  host: "0.0.0.0"
+  port: 8000
+
+monitoring:
+  drift_threshold: 0.05
+  performance_threshold: 0.7
