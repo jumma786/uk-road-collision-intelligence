@@ -51,6 +51,9 @@ def load_model():
 
 def render_kpi_bar(df):
     total = len(df)
+    if total == 0:
+        st.warning("No collisions match the current filters.")
+        return
     fatal = (df["collision_severity"] == 1).sum() if "collision_severity" in df.columns else 0
     serious = (df["collision_severity"] == 2).sum() if "collision_severity" in df.columns else 0
     casualties = df["number_of_casualties"].sum() if "number_of_casualties" in df.columns else 0
@@ -434,6 +437,57 @@ def build_prediction_features(speed, vehicles, casualties, road_type,
     return pd.DataFrame([d])
 
 
+def apply_filters(df):
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Filters")
+
+    severity = st.sidebar.multiselect(
+        "Severity",
+        options=sorted(df["collision_severity_label"].unique()),
+        default=sorted(df["collision_severity_label"].unique()),
+    )
+
+    area_opts = sorted(df["urban_or_rural_area_label"].unique())
+    area = st.sidebar.multiselect("Area", options=area_opts, default=area_opts)
+
+    month_range = st.sidebar.slider(
+        "Month range", min_value=1, max_value=12, value=(1, 12)
+    )
+
+    hour_range = st.sidebar.slider(
+        "Hour range", min_value=0, max_value=23, value=(0, 23)
+    )
+
+    road_class_opts = sorted(df["first_road_class_label"].unique())
+    road_class = st.sidebar.multiselect(
+        "Road class", options=road_class_opts, default=road_class_opts
+    )
+
+    speed_opts = sorted(df["speed_limit"].dropna().unique().astype(int).tolist())
+    speed = st.sidebar.multiselect(
+        "Speed limit (mph)", options=speed_opts, default=speed_opts
+    )
+
+    weather_opts = sorted(df["weather_conditions_label"].unique())
+    weather = st.sidebar.multiselect("Weather", options=weather_opts, default=weather_opts)
+
+    filtered = df[
+        (df["collision_severity_label"].isin(severity))
+        & (df["urban_or_rural_area_label"].isin(area))
+        & (df["month"].between(*month_range))
+        & (df["hour"].between(*hour_range))
+        & (df["first_road_class_label"].isin(road_class))
+        & (df["speed_limit"].isin(speed) | df["speed_limit"].isna())
+        & (df["weather_conditions_label"].isin(weather))
+    ]
+
+    pct = len(filtered) / len(df) * 100 if len(df) > 0 else 0
+    st.sidebar.markdown("---")
+    st.sidebar.metric("Filtered records", f"{len(filtered):,}", f"{pct:.0f}% of total")
+
+    return filtered
+
+
 def main():
     st.set_page_config(
         page_title="UK Road Collision Intelligence",
@@ -455,6 +509,10 @@ def main():
     }
 
     page = st.sidebar.radio("Navigation", list(pages.keys()))
+
+    if page not in ("Model Performance", "Predict Severity"):
+        data = {**data, "collisions": apply_filters(data["collisions"])}
+
     pages[page](data)
 
     st.sidebar.markdown("---")
