@@ -126,10 +126,10 @@ pip install -r requirements.txt
 
 ### 2. Add Data
 
-Download the 3 DfT CSV files from [road casualty statistics](https://www.data.gov.uk/dataset/road-accidents-safety-data) and place them in the project root:
-- `dft-road-casualty-statistics-collision-2024_raw_data.csv`
-- `dft-road-casualty-statistics-casualty-2024.csv`
-- `dft-road-casualty-statistics-vehicle-2024.csv`
+Download the 3 DfT CSV files from [road casualty statistics](https://www.data.gov.uk/dataset/road-accidents-safety-data) and place them in `data/raw/`:
+- `data/raw/dft-road-casualty-statistics-collision-2024_raw_data.csv`
+- `data/raw/dft-road-casualty-statistics-casualty-2024.csv`
+- `data/raw/dft-road-casualty-statistics-vehicle-2024.csv`
 
 ### 3. Run the Full Pipeline
 

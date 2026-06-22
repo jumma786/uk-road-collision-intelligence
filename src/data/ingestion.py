@@ -37,7 +37,7 @@ def load_vehicle_data(path: str) -> pd.DataFrame:
 
 def load_all_tables(config: dict) -> dict[str, pd.DataFrame]:
     paths = config["paths"]
-    base = Path(".")
+    base = Path(paths["raw_data_dir"])
 
     tables = {
         "collision": load_collision_data(str(base / paths["raw_collision"])),

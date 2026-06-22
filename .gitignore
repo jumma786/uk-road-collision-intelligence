@@ -9,8 +9,7 @@ data/predictions/
 .claude/
 
 # Raw data (too large for git)
-dft-road-casualty-statistics-*.csv
-dft-road-casualty-statistics-*.xlsx
+data/raw/
 
 # Processed data (regenerable via pipeline)
 data/processed/
