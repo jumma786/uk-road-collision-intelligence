@@ -296,6 +296,7 @@ The data is already being collected. The question is whether we use it.
 **Jumma Mohammad Teli** — Data Scientist and ML Engineer passionate about using data to solve real-world problems. This project combines machine learning, geospatial analysis, and MLOps engineering to turn publicly available government data into a practical tool for road safety.
 
 Connect with me:
+- **LinkedIn:** [linkedin.com/in/jumma-mohammad](https://www.linkedin.com/in/jumma-mohammad/)
 - **Email:** jummamohammad477@gmail.com
 - **GitHub:** [github.com/jumma786](https://github.com/jumma786)
 - **Hugging Face:** [huggingface.co/JUMMAMOHAMMAD477](https://huggingface.co/JUMMAMOHAMMAD477)
