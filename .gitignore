@@ -12,9 +12,11 @@ data/predictions/
 dft-road-casualty-statistics-*.csv
 dft-road-casualty-statistics-*.xlsx
 
-# Large models (keep only lightweight ones for dashboard)
-mlruns/models/random_forest.joblib
-mlruns/models/logistic_regression.joblib
+# Processed data (regenerable via pipeline)
+data/processed/
+
+# Models (regenerable via pipeline)
+mlruns/models/
 
 # Scratch files
 Untitled*.ipynb
