@@ -1,14 +1,28 @@
 # How AI Can Predict Road Collision Severity — And Why It Matters for UK Road Safety
 
-## I analysed 100,000+ real collision records to find what actually makes roads dangerous — and built a tool that predicts how severe a crash will be before it happens
+## I analysed 100,000+ real collision records to uncover what actually makes roads dangerous — and built a live tool anyone can use to explore the data
 
 ---
 
-In 2024, over **100,000 road collisions** were reported across the UK, resulting in more than **128,000 casualties**. Behind every statistic is a family affected, an emergency service stretched, and a community impacted.
+In 2024, over **100,000 road collisions** were reported across the UK, resulting in more than **128,000 casualties** and **183,000+ vehicles** involved. Behind every statistic is a family affected, an emergency service stretched, and a community impacted.
 
 But here's the thing — most of these collisions follow patterns. Certain roads, certain times, certain conditions produce far worse outcomes than others. What if we could see those patterns clearly, and use them to make smarter decisions about where to invest in road safety?
 
-That's exactly what I set out to build.
+That's exactly what I set out to build — and you can explore it right now.
+
+---
+
+## Try It Live
+
+I've deployed the platform across three hosting services so anyone can access it:
+
+| Platform | Link |
+|----------|------|
+| **Streamlit Cloud** | [uk-road-collision-intelligence.streamlit.app](https://uk-road-collision-intelligence-imutd2qu9ybzujv9appkmd.streamlit.app/) |
+| **Hugging Face Spaces** | [huggingface.co/spaces/JUMMAMOHAMMAD477](https://huggingface.co/spaces/JUMMAMOHAMMAD477/uk-road-collision-intelligence) |
+| **Render** | [uk-road-collision-intelligence.onrender.com](https://uk-road-collision-intelligence.onrender.com) |
+
+No installation needed. Just click any link and start exploring.
 
 ---
 
@@ -16,23 +30,29 @@ That's exactly what I set out to build.
 
 The **UK Road Collision Intelligence Platform** takes raw government data and transforms it into actionable insights through three layers:
 
-1. **An interactive dashboard** where anyone can explore collision patterns by location, time, weather, road type, and more
-2. **A geographic hotspot map** that identifies the most dangerous locations across the UK
-3. **A prediction tool** that estimates how severe a collision would be given specific road and environmental conditions
+1. **An interactive dashboard** where anyone can explore collision patterns by location, time, weather, road type, and more — with real-time filters
+2. **A geographic hotspot map** that pinpoints the **2,335 most dangerous locations** across the UK, with 117 flagged as critical
+3. **A prediction tool** that estimates how severe a collision would be given specific road and environmental conditions — powered by AI that was tested against four different approaches to find the most reliable one
 
 No coding required to use it. Just open the dashboard, apply filters, and explore.
 
 ---
 
-## Where the Data Comes From
+## The Numbers That Matter
 
-The UK Department for Transport publishes detailed records for every reported road collision. The 2024 dataset includes:
+Before diving into how it works, here are the headline findings that came straight from the data:
 
-- **100,927 collision records** — where it happened, when, road conditions, severity outcome
-- **128,272 casualty records** — the age, type, and severity for every person involved
-- **188,000+ vehicle records** — vehicle type, driver age, engine size
+| Finding | What the Data Shows |
+|---------|-------------------|
+| Night driving | Fatal collision rate is **2.1x higher** than daytime |
+| Rural vs urban roads | Fatal rate is **3.4x higher** in rural areas |
+| Speed limit impact | 60mph zones have a **6.6x higher** fatal rate than 20mph zones |
+| Heavy goods vehicles | HGV-involved collisions have a **5.96% fatality rate** — 4x the national average |
+| Elderly casualties (65+) | **3.58% fatal rate** — 2.4x the average across all ages |
+| Dangerous hotspot clusters | **2,335 identified**, with **117 rated Critical** |
+| Most dangerous hour | Collisions peak at **5 PM** (8,784 in 2024), but fatal collisions peak between **8 PM and midnight** |
 
-This is real, verified data collected by police forces across the country. It's comprehensive, it's free, and until now, it's been sitting in spreadsheets.
+These aren't assumptions — they're facts drawn from every reported collision in the UK for 2024.
 
 ---
 
@@ -62,13 +82,13 @@ Fine, dry weather actually sees the **most collisions** — simply because more 
 
 ### Vulnerable road users face the worst outcomes
 
-Motorcycle involvement significantly increases collision severity. Collisions involving heavy goods vehicles result in more casualties per incident. Elderly casualties face disproportionately severe outcomes. E-scooter-related collisions are a growing and concerning new category.
+Motorcycle involvement significantly increases collision severity. Collisions involving heavy goods vehicles result in more casualties per incident — with a fatality rate 4x the national average. Elderly casualties face disproportionately severe outcomes. E-scooter-related collisions are a growing and concerning new category.
 
 ---
 
 ## How the Hotspot Map Works
 
-Not every stretch of road is equally dangerous. Using geographic clustering, the platform identifies **collision hotspots** — locations where incidents cluster within a 500-metre radius.
+Not every stretch of road is equally dangerous. Using geographic clustering, the platform identifies **2,335 collision hotspots** — locations where incidents cluster within a 500-metre radius. **61.5% of all collisions fall within these hotspots.**
 
 Each hotspot is scored and ranked using four factors:
 
@@ -77,7 +97,16 @@ Each hotspot is scored and ranked using four factors:
 - **Environmental danger** — how often collisions happen in dark, wet, or high-speed conditions
 - **Volume** — how many collisions occur at this location
 
-Hotspots are classified into four tiers: **Critical**, **High**, **Medium**, and **Low**. The top 100 most dangerous hotspots are plotted on an interactive map where stakeholders can zoom in, click on clusters, and see the risk profile for any location.
+Hotspots are classified into four risk tiers:
+
+| Tier | Count | What It Means |
+|------|-------|--------------|
+| **Critical** | 117 | Highest risk — 9.9% fatality rate (6.6x national average) |
+| **High** | 336 | Significantly above average risk |
+| **Medium** | 706 | Moderate risk requiring monitoring |
+| **Low** | 1,176 | Below average risk but still clustered |
+
+The top 100 most dangerous hotspots are plotted on an interactive map where stakeholders can zoom in, click on clusters, and see the complete risk profile for any location.
 
 ### Who benefits from this?
 
@@ -85,6 +114,7 @@ Hotspots are classified into four tiers: **Critical**, **High**, **Medium**, and
 - **Police forces** can see which hotspots fall within their area and how they compare nationally
 - **Transport planners** can prioritise infrastructure spending based on data, not assumptions
 - **Insurance companies** can better understand geographic risk concentrations
+- **Road safety campaigners** can use specific data to support their advocacy
 
 ---
 
@@ -119,18 +149,18 @@ The prediction tool turns data into a planning instrument.
 
 ## Four AI Models Tested — One Clear Winner
 
-I tested four different machine learning approaches to find the most reliable predictor:
+I tested four different machine learning approaches to find the most reliable predictor. Here's what mattered:
 
-| Approach | Strengths |
-|----------|-----------|
-| **Logistic Regression** | Simple, fast, interpretable — used as a baseline |
-| **Random Forest** | Good overall accuracy, handles many variables well |
-| **XGBoost** | Strong performance on imbalanced data |
-| **LightGBM** | Best at detecting fatal collisions — the hardest and most important category |
+| Approach | What It's Good At | Fatal Detection Rate |
+|----------|-------------------|---------------------|
+| Logistic Regression | Simple baseline | 57% (but poor overall accuracy) |
+| Random Forest | Good overall accuracy | Only 8% |
+| XGBoost | Strong all-round performer | 11% |
+| **LightGBM (Tuned)** | **Best balance of accuracy and fatal detection** | **35%** |
 
-**LightGBM** was the clear winner, particularly for identifying fatal collisions. This matters because only ~2% of collisions are fatal — a naive model could achieve 98% "accuracy" by simply never predicting a fatal outcome. LightGBM is specifically better at catching these rare but critical events.
+**Why fatal detection matters most:** Only ~2% of collisions are fatal. A naive model could achieve 98% "accuracy" by simply never predicting a fatal outcome. That looks great on paper but is completely useless for road safety. LightGBM was specifically chosen because it catches 4x more fatal collisions than Random Forest while maintaining strong overall performance.
 
-The model was then fine-tuned through 50 rounds of automated optimisation to squeeze out maximum performance.
+The winning model was then fine-tuned through **50 rounds of automated optimisation** to squeeze out maximum performance — achieving the highest overall reliability score of all models tested.
 
 ### What drives the predictions?
 
@@ -155,32 +185,47 @@ The platform is accessed through an interactive web dashboard with five sections
 At-a-glance KPIs — total collisions, fatal count, serious injuries, total casualties. Plus charts showing how collisions distribute by hour, day of week, month, and speed limit. Everything updates instantly when you apply filters.
 
 ### Hotspot Map
-Two interactive maps: one showing individual collisions colour-coded by severity (Fatal in red, Serious in orange, Slight in green), and one showing hotspot clusters sized by volume and coloured by risk tier.
+Two interactive maps: one showing individual collisions colour-coded by severity (Fatal in red, Serious in orange, Slight in green), and one showing hotspot clusters sized by collision count and coloured by risk tier. Zoom into any area to see local patterns.
 
 ### Conditions Analysis
 Side-by-side comparisons of how fatal rates change across light conditions, weather, road surface, and overall danger score. Immediately reveals which environmental factors matter most.
 
 ### Model Performance
-Transparent comparison of all four models tested, plus a visual breakdown of which features matter most for predictions.
+Transparent comparison of all four models tested, plus a visual breakdown of which features matter most for predictions. Full accountability — no hidden decisions.
 
 ### Predict Severity
-The interactive scenario planning tool described above.
+The interactive scenario planning tool described above. Select conditions, click predict, and get an instant severity estimate with probabilities.
 
 ### Sidebar Filters
-Every analytical page can be filtered by severity, urban/rural, month range, hour range, road class, speed limit, and weather. A counter shows how many records match your current selection.
+Every analytical page can be filtered by severity, urban/rural, month range, hour range, road class, speed limit, and weather. A counter shows how many records match your current selection out of the full 100,927.
 
 ---
 
-## Built to Stay Current
+## How It's Built (The Short Version)
 
-Road conditions change. New roads are built, speed limits are updated, traffic patterns shift after major developments. A one-time analysis becomes outdated quickly.
+For those curious about the technical foundation — without getting into the code:
 
-This platform is designed to **keep working** as new data arrives:
+```
+Raw Government Data (3 tables, 412,000+ records)
+    ↓
+Data Cleaning & Preparation → 112 engineered features
+    ↓
+Geographic Hotspot Detection → 2,335 danger clusters identified
+    ↓
+AI Model Training → 4 models tested, best one selected and fine-tuned
+    ↓
+Live Dashboard + Prediction API → deployed across 3 platforms
+    ↓
+Automated Monitoring → detects when data patterns change
+```
 
-- **Automated monitoring** detects when incoming data starts looking different from what the model was trained on — a signal that the model may need updating
-- **Alert system** flags unusual prediction patterns, like a sudden spike in fatal predictions
-- **Automated testing** runs the entire pipeline on every update to ensure nothing breaks
-- The whole system can be **retrained in minutes** when new annual data is released by the DfT
+The entire pipeline is **automated and reproducible** — when the DfT releases new data next year, the system can be retrained in minutes.
+
+The platform also includes:
+- **74 automated tests** to ensure data quality and model reliability
+- **Continuous integration** that re-runs the full pipeline on every update
+- **Drift detection** that alerts when incoming data looks different from what the model was trained on
+- A **REST API** for organisations that want to integrate predictions into their own systems
 
 ---
 
@@ -190,22 +235,27 @@ This platform is designed to **keep working** as new data arrives:
 - Evidence-based prioritisation of road safety interventions
 - Identify which specific roads and junctions in your area are the most dangerous
 - Model the impact of proposed changes (speed limits, lighting, road redesign) before spending
+- Quantified data to support funding applications
 
 ### For Emergency Services
 - Allocate resources based on when and where the most *severe* incidents occur, not just the most *frequent*
 - Identify temporal patterns for shift planning
+- Understand which conditions most often lead to fatal responses
 
 ### For Insurance Companies
 - Understand geographic and environmental risk concentrations
 - Improve risk assessment models with data-driven severity predictions
+- Identify emerging trends (e.g., e-scooter-related claims)
 
 ### For Road Safety Researchers and Campaigners
 - Access to clear, visual evidence of which factors drive fatal outcomes
 - Data to support policy recommendations with quantified impact
+- Transparent methodology — the full source code is open for review
 
 ### For the Public
 - Transparent access to road safety data for their local area
 - Understanding of which conditions make driving most dangerous
+- Empowerment through information
 
 ---
 
@@ -217,6 +267,7 @@ This platform is a foundation. Future enhancements could include:
 - **Weekly forecasting** — predicting how many collisions to expect in each region next week
 - **Live data feeds** — connecting to real-time police incident reports instead of annual data releases
 - **Before-and-after analysis** — measuring whether a specific road intervention actually reduced severity
+- **Regional comparison reports** — automated briefings for each police force or local authority area
 
 ---
 
@@ -228,4 +279,29 @@ The data is already being collected. The question is whether we use it.
 
 ---
 
-*Data source: UK Department for Transport — Road Casualty Statistics 2024. The platform is open source and available for councils, researchers, and organisations working on road safety.*
+## Explore the Platform
+
+| Resource | Link |
+|----------|------|
+| **Live Dashboard (Streamlit)** | [uk-road-collision-intelligence.streamlit.app](https://uk-road-collision-intelligence-imutd2qu9ybzujv9appkmd.streamlit.app/) |
+| **Live Dashboard (Hugging Face)** | [huggingface.co/spaces/JUMMAMOHAMMAD477](https://huggingface.co/spaces/JUMMAMOHAMMAD477/uk-road-collision-intelligence) |
+| **Live Dashboard (Render)** | [uk-road-collision-intelligence.onrender.com](https://uk-road-collision-intelligence.onrender.com) |
+| **Source Code (GitHub)** | [github.com/jumma786/uk-road-collision-intelligence](https://github.com/jumma786/uk-road-collision-intelligence) |
+| **Data Source** | [DfT Road Casualty Statistics 2024](https://www.data.gov.uk/dataset/road-accidents-safety-data) |
+
+---
+
+## About the Author
+
+**Jumma Mohammad Teli** — Data Scientist and ML Engineer passionate about using data to solve real-world problems. This project combines machine learning, geospatial analysis, and MLOps engineering to turn publicly available government data into a practical tool for road safety.
+
+Connect with me:
+- **Email:** jummamohammad477@gmail.com
+- **GitHub:** [github.com/jumma786](https://github.com/jumma786)
+- **Hugging Face:** [huggingface.co/JUMMAMOHAMMAD477](https://huggingface.co/JUMMAMOHAMMAD477)
+
+If you're a council, transport body, researcher, or organisation working on road safety — I'd love to hear how this data could help your work.
+
+---
+
+*Data source: UK Department for Transport — Road Casualty Statistics 2024. Built with Python, LightGBM, Streamlit, FastAPI, and Plotly. The platform is open source under the MIT licence.*
