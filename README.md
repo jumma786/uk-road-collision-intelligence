@@ -11,7 +11,21 @@ pinned: false
 
 # UK Road Collision Intelligence Platform
 
+[![Streamlit](https://img.shields.io/badge/Streamlit-Live_Dashboard-FF4B4B?logo=streamlit&logoColor=white)](https://uk-road-collision-intelligence-imutd2qu9ybzujv9appkmd.streamlit.app/)
+[![Hugging Face](https://img.shields.io/badge/HuggingFace-Spaces-FFD21E?logo=huggingface&logoColor=black)](https://huggingface.co/spaces/JUMMAMOHAMMAD477/uk-road-collision-intelligence)
+[![Render](https://img.shields.io/badge/Render-Deployed-46E3B7?logo=render&logoColor=white)](https://uk-road-collision-intelligence.onrender.com)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 End-to-end MLOps platform for analyzing and predicting UK road collision severity using the Department for Transport (DfT) 2024 road casualty statistics.
+
+## Live Demo
+
+| Platform | Link |
+|----------|------|
+| **Streamlit Cloud** | [uk-road-collision-intelligence.streamlit.app](https://uk-road-collision-intelligence-imutd2qu9ybzujv9appkmd.streamlit.app/) |
+| **Hugging Face Spaces** | [huggingface.co/spaces/JUMMAMOHAMMAD477](https://huggingface.co/spaces/JUMMAMOHAMMAD477/uk-road-collision-intelligence) |
+| **Render** | [uk-road-collision-intelligence.onrender.com](https://uk-road-collision-intelligence.onrender.com) |
 
 ## Overview
 
