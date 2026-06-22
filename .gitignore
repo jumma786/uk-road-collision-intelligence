@@ -5,10 +5,20 @@ __pycache__/
 .ipynb_checkpoints/
 .env
 *.log
-mlruns/
-!mlruns/models/
-data/processed/
 data/predictions/
-*.parquet
-*.joblib
 .claude/
+
+# Raw data (too large for git)
+dft-road-casualty-statistics-*.csv
+dft-road-casualty-statistics-*.xlsx
+
+# Large models (keep only lightweight ones for dashboard)
+mlruns/models/random_forest.joblib
+mlruns/models/logistic_regression.joblib
+
+# Scratch files
+Untitled*.ipynb
+UK_Road_Collision_Dashboard_Report.docx
+{len(df.columns)}
+50%
+60%)

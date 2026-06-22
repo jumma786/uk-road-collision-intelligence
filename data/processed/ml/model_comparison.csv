@@ -1,0 +1,6 @@
+model,accuracy,f1_weighted,f1_macro,precision_wt,recall_wt,roc_auc,train_time_s
+Random_Forest,0.7372,0.7291,0.4638,0.7237,0.7372,0.7366,54.5
+XGBoost,0.7001,0.7115,0.4647,0.7307,0.7001,0.7403,41.2
+LightGBM_Tuned,0.6702,0.6946,0.4822,0.7425,0.6702,0.7489,0.0
+LightGBM,0.6642,0.6909,0.4679,0.7413,0.6642,0.7446,24.2
+Logistic_Regression,0.3959,0.4835,0.2869,0.6565,0.3959,0.563,97.9
