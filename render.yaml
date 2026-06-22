@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: uk-road-collision-dashboard
+    runtime: docker
+    dockerfilePath: ./Dockerfile.streamlit
+    plan: free
+    envVars:
+      - key: PORT
+        value: "8501"

@@ -1,3 +1,14 @@
+---
+title: UK Road Collision Intelligence
+emoji: 🚗
+colorFrom: red
+colorTo: yellow
+sdk: streamlit
+sdk_version: "1.28.0"
+app_file: src/dashboard/app.py
+pinned: false
+---
+
 # UK Road Collision Intelligence Platform
 
 End-to-end MLOps platform for analyzing and predicting UK road collision severity using the Department for Transport (DfT) 2024 road casualty statistics.
