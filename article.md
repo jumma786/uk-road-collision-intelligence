@@ -1,302 +1,231 @@
-# Building a Full MLOps Pipeline to Predict UK Road Collision Severity
+# How AI Can Predict Road Collision Severity — And Why It Matters for UK Road Safety
 
-## How I turned 100,000+ government collision records into a real-time severity prediction system — from raw CSVs to a deployed dashboard
-
----
-
-Every year, thousands of people die on UK roads. In 2024 alone, the Department for Transport recorded over 100,000 road collisions resulting in more than 128,000 casualties. Behind every number is a person — and behind every collision is a pattern waiting to be found.
-
-I built the **UK Road Collision Intelligence Platform** — an end-to-end machine learning system that ingests raw government data, discovers geographic hotspots, trains severity prediction models, and serves predictions through both a live dashboard and a REST API. This article walks through the architecture, the engineering decisions, and what the data actually reveals about road safety in the UK.
+## I analysed 100,000+ real collision records to find what actually makes roads dangerous — and built a tool that predicts how severe a crash will be before it happens
 
 ---
 
-## The Data: Three Tables, One Story
+In 2024, over **100,000 road collisions** were reported across the UK, resulting in more than **128,000 casualties**. Behind every statistic is a family affected, an emergency service stretched, and a community impacted.
 
-The UK Department for Transport publishes detailed collision data annually. The 2024 dataset comes in three separate CSV files:
+But here's the thing — most of these collisions follow patterns. Certain roads, certain times, certain conditions produce far worse outcomes than others. What if we could see those patterns clearly, and use them to make smarter decisions about where to invest in road safety?
 
-- **Collisions** (~100,927 records) — location, time, road conditions, severity
-- **Casualties** (~128,272 records) — age, type, severity of each person involved
-- **Vehicles** (~188,000+ records) — vehicle type, age, engine capacity, driver age
-
-Each collision can involve multiple vehicles and multiple casualties, creating a one-to-many relationship that needs careful aggregation during feature engineering.
-
-The raw data uses numeric codes for everything — `1` means "Fatal," `6` means "Single carriageway," `-1` means "Missing." The first challenge was turning this into something meaningful.
+That's exactly what I set out to build.
 
 ---
 
-## Phase 1: The ETL Pipeline
+## What I Built
 
-### Ingestion
+The **UK Road Collision Intelligence Platform** takes raw government data and transforms it into actionable insights through three layers:
 
-Nothing fancy here — just `pandas.read_csv` with `low_memory=False` to let pandas infer types freely. All three tables load through a config-driven system (`configs/config.yaml`) so paths and parameters live outside the code.
+1. **An interactive dashboard** where anyone can explore collision patterns by location, time, weather, road type, and more
+2. **A geographic hotspot map** that identifies the most dangerous locations across the UK
+3. **A prediction tool** that estimates how severe a collision would be given specific road and environmental conditions
 
-### Cleaning
-
-The cleaning pipeline handles several concerns:
-
-**Missing codes → NaN.** The DfT encodes missing values as `-1` across all numeric columns. I scan every numeric column, replace `-1` with `NaN`, and log how many were found. This single step affected thousands of records.
-
-**Date parsing.** Collision dates arrive as `DD/MM/YYYY` strings with separate time fields. These get parsed into proper datetimes, and I extract `hour`, `month`, and `week` for temporal analysis.
-
-**Label mappings.** I maintain a comprehensive mapping dictionary that translates every numeric code into human-readable labels — severity, road type, weather conditions, light conditions, vehicle types. These label columns power the dashboard filters and visualizations.
-
-**Outlier clipping.** Driver ages get clipped to 16–100, casualty ages to 0–110, engine capacity to 0–10,000cc, and vehicle age to 0–80 years. These bounds catch data entry errors without discarding valid records.
-
-**Constant column removal.** Any column with zero variance gets dropped automatically.
-
-The cleaned tables are saved as Parquet files — roughly 5x smaller than the original CSVs and significantly faster to read.
+No coding required to use it. Just open the dashboard, apply filters, and explore.
 
 ---
 
-## Phase 2: Feature Engineering
+## Where the Data Comes From
 
-This is where raw columns become predictive signals. I engineered features across five categories:
+The UK Department for Transport publishes detailed records for every reported road collision. The 2024 dataset includes:
 
-### Temporal Features
+- **100,927 collision records** — where it happened, when, road conditions, severity outcome
+- **128,272 casualty records** — the age, type, and severity for every person involved
+- **188,000+ vehicle records** — vehicle type, driver age, engine size
 
-Raw hour and day-of-week values don't capture cyclical patterns well — hour 23 and hour 0 are numerically distant but temporally adjacent. I used **sine/cosine encoding** to fix this:
-
-```python
-df["hour_sin"] = np.sin(2 * np.pi * df["hour"] / 24)
-df["hour_cos"] = np.cos(2 * np.pi * df["hour"] / 24)
-```
-
-Plus binary flags: `is_rush_hour` (7–9am, 4–6pm), `is_night` (10pm–5am), `is_weekend`.
-
-### Road Risk Features
-
-- `is_high_speed` — speed limit ≥ 60mph
-- `is_rural` — urban/rural area code = 2
-- `is_single_carriageway` — the most common road type in fatal collisions
-- `is_at_junction` — junction detail is non-zero
-- `is_major_road` — motorway, A-road, or B-road
-
-### Condition Features
-
-- `is_dark` — any darkness condition (lit, unlit, no lighting)
-- `is_adverse_weather` — rain, snow, fog, high winds
-- `is_wet_surface` — wet, damp, frost, ice, snow
-
-These roll up into a **composite danger score** (0–5) that sums the binary risk flags. Simple, interpretable, and surprisingly predictive.
-
-### Interaction Features
-
-Some risk factors compound. I explicitly modeled four key interactions:
-
-- `dark_rural` — darkness × rural area
-- `high_speed_wet` — high speed × wet surface
-- `weekend_night` — weekend × nighttime
-- `rural_high_speed` — rural × high speed zone
-
-### Vehicle and Casualty Aggregations
-
-Since multiple vehicles and casualties map to a single collision, I aggregated up:
-
-- **Vehicle-level:** average driver age, max engine capacity, motorcycle/HGV involvement, skid events, e-scooter flags
-- **Casualty-level:** average/minimum casualty age, pedestrian count, child and elderly casualty flags
-
-The final feature matrix: **100,927 rows × 60+ features**.
-
----
-
-## Phase 3: Geospatial Hotspot Detection
-
-Not all locations are equally dangerous. I used **DBSCAN clustering** on collision coordinates to identify geographic hotspots — areas where collisions cluster abnormally.
-
-### Why DBSCAN?
-
-DBSCAN doesn't require specifying the number of clusters upfront (unlike K-Means), and it naturally handles noise — isolated collisions that don't belong to any cluster. Perfect for spatial data.
-
-The key parameter is `eps` — the maximum distance between two points to be considered neighbors. I set this to **0.5 km** (converted to radians for the haversine metric) with a minimum of 5 collisions per cluster.
-
-```python
-dbscan = DBSCAN(
-    eps=eps_rad,           # 0.5km in radians
-    metric="haversine",    # proper Earth-surface distance
-    algorithm="ball_tree", # efficient for haversine
-    min_samples=5,
-    n_jobs=-1,
-)
-```
-
-### Cluster Risk Scoring
-
-Each cluster gets profiled with a composite risk score:
-
-```
-risk_score = fatality_rate × 50
-           + serious_injury_rate × 30
-           + avg_danger_score / 5 × 10
-           + relative_cluster_size × 10
-```
-
-Clusters are then binned into risk tiers — **Critical** (top 5%), **High** (top 20%), **Medium** (top 50%), and **Low**. The cluster features (`cluster_risk_score`, `is_in_hotspot`) feed back into the ML model as additional predictive signals.
-
----
-
-## Phase 4: Model Training
-
-### The Setup
-
-Target variable: **collision severity** (Fatal / Serious / Slight).
-
-This is a heavily imbalanced multi-class problem:
-- Slight: ~83%
-- Serious: ~15%
-- Fatal: ~2%
-
-Every model uses `class_weight="balanced"` or manual sample weighting to counteract this imbalance. Evaluation uses **F1-weighted** and **F1-macro** (which treats all classes equally regardless of size) alongside standard accuracy.
-
-### Four Models, Head to Head
-
-I trained four classifiers with 5-fold stratified cross-validation:
-
-| Model | Key Config |
-|-------|-----------|
-| **Logistic Regression** | Baseline, balanced weights, max_iter=1000 |
-| **Random Forest** | 200 trees, max_depth=20, balanced weights |
-| **XGBoost** | 300 estimators, max_depth=8, manual sample weights |
-| **LightGBM** | 300 estimators, max_depth=8, balanced weights |
-
-### Hyperparameter Tuning
-
-The best-performing model (LightGBM) gets a second pass through **Optuna** — a Bayesian hyperparameter optimization framework. I ran 50 trials optimizing F1-macro with 5-fold CV:
-
-```python
-params = {
-    "n_estimators": trial.suggest_int("n_estimators", 100, 600),
-    "max_depth": trial.suggest_int("max_depth", 3, 12),
-    "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
-    "num_leaves": trial.suggest_int("num_leaves", 15, 127),
-    "min_child_samples": trial.suggest_int("min_child_samples", 5, 100),
-    # ... plus regularization params
-}
-```
-
-### Why LightGBM Won
-
-LightGBM consistently outperformed the others, particularly on **Fatal recall** — the metric that matters most for a road safety application. A model that never predicts "Fatal" can still achieve 98% accuracy, but it's useless for identifying dangerous collisions before they happen.
-
-The key advantage: LightGBM's leaf-wise tree growth strategy captures complex feature interactions (like `dark_rural` combined with `high_speed_wet`) more efficiently than level-wise approaches.
-
-### Feature Importance
-
-The top predictive features tell a clear story:
-
-1. **Number of casualties** — more casualties correlate with more severe collisions
-2. **Speed limit** — fatal collision rates rise sharply above 60mph
-3. **Casualty age** — elderly casualties face disproportionately severe outcomes
-4. **Engine capacity** — a proxy for vehicle size/type differences
-5. **Danger score** — the composite condition risk metric
-6. **is_dark** / **is_rural** — and their interaction `dark_rural`
-
-### Target Leakage Prevention
-
-One critical engineering decision: I explicitly dropped columns that encode or are derived from the target variable. Columns like `fatal_casualty_count`, `serious_casualty_count`, and `casualty_severity` would give the model perfect information about the outcome — making it useless for actual prediction. These are stripped out during preprocessing.
-
----
-
-## Serving: Dashboard + API
-
-### Streamlit Dashboard
-
-The interactive dashboard has five pages:
-
-1. **Overview** — KPI cards (total collisions, fatal count, casualty count), severity distribution pie chart, hourly/daily/monthly trends, speed limit vs. fatality rate
-2. **Hotspot Map** — Interactive Mapbox scatter plot of 5,000 sampled collisions color-coded by severity, plus a cluster risk map showing the top 100 hotspots sized by collision count and colored by risk tier
-3. **Conditions Analysis** — Fatal rate breakdowns by light conditions, weather, road surface, and danger score
-4. **Model Performance** — Side-by-side model comparison chart and top 20 feature importance
-5. **Predict Severity** — Interactive form where users input road conditions, driver details, and collision characteristics to get a real-time severity prediction with probability breakdown
-
-The sidebar provides **live filtering** across all analytical pages — by severity, area, month range, hour range, road class, speed limit, and weather conditions.
-
-### FastAPI REST API
-
-For programmatic access, a FastAPI server exposes:
-
-- `POST /predict` — single collision prediction with severity label, probability distribution, and identified risk factors
-- `POST /predict/batch` — batch predictions
-- `GET /health` — model status and feature count
-
-The API replicates the full feature engineering pipeline at inference time — every binary flag, interaction term, and danger score calculation is reproduced from raw inputs to ensure consistency between training and serving.
-
----
-
-## Monitoring: Drift Detection
-
-Deployed models degrade. Road patterns change — new speed limits, infrastructure changes, policy shifts. The monitoring module implements:
-
-**Statistical drift detection** using the Kolmogorov–Smirnov test across all numeric features. If more than 30% of features show statistically significant distribution shift (p < 0.05), the system flags overall drift.
-
-**Performance monitoring** that logs every prediction with timestamps and features, enabling trend analysis on prediction distributions. An alert triggers if fatal prediction rates spike above 10% — a signal that either the model or the input data has shifted.
-
----
-
-## CI/CD Pipeline
-
-The GitHub Actions workflow runs the full pipeline on every push:
-
-1. Install dependencies
-2. Run ETL pipeline
-3. Run geospatial pipeline
-4. Run ML pipeline
-5. Execute test suite (`pytest`)
-6. Upload model artifacts
-
-This ensures that code changes don't silently break the pipeline, and that model artifacts are always reproducible from source.
+This is real, verified data collected by police forces across the country. It's comprehensive, it's free, and until now, it's been sitting in spreadsheets.
 
 ---
 
 ## What the Data Reveals
 
-Some findings from the analysis:
+### The most dangerous time isn't when you'd expect
 
-**Time patterns.** Collisions peak during evening rush hour (4–6pm), but **fatal** collisions peak later — between 8pm and midnight. Weekend nights are particularly dangerous.
+Collisions are most *frequent* during the evening rush hour (4–6pm) — that's when traffic is heaviest. But **fatal** collisions peak much later, between **8pm and midnight**. Weekend nights are especially deadly.
 
-**Speed kills — literally.** The fatality rate jumps dramatically at 60mph and above. Rural single carriageways at national speed limit are the highest-risk road type.
+This matters for resource planning. If you're allocating emergency services or police patrols purely based on collision volume, you're missing the window when the most serious incidents happen.
 
-**Darkness compounds risk.** Dark conditions without street lighting have the highest fatal rate of any light condition. Combined with rural locations (`dark_rural` interaction), this is the single strongest risk signal.
+### Speed is the single biggest factor
 
-**Weather is less predictive than you'd think.** Fine weather actually sees more collisions (more traffic). The fatal *rate* increases in fog and heavy rain, but the absolute numbers are smaller.
+The fatality rate rises dramatically once the speed limit exceeds 60mph. Rural single carriageways — country roads with the national speed limit — are the most dangerous road type by a wide margin.
 
-**Vehicle type matters.** Motorcycle involvement significantly increases severity. HGV involvement increases casualty counts. E-scooter collisions are a growing category.
+This isn't surprising, but the data quantifies it precisely. It gives councils and transport authorities the evidence base to justify speed limit reviews on specific roads.
 
----
+### Darkness and rural roads are a deadly combination
 
-## Architecture Decisions Worth Noting
+Dark conditions without street lighting produce the highest fatal collision rate of any lighting condition. When you combine darkness with a rural location, the risk compounds — this combination is the **single strongest predictor** of a fatal outcome in the entire dataset.
 
-**Config-driven everything.** Paths, parameters, thresholds — all in `config.yaml`. No magic numbers buried in code.
+This has direct implications for infrastructure investment. Street lighting on high-risk rural stretches could save lives — and the data can identify exactly which stretches to prioritise.
 
-**Modular pipeline phases.** ETL, Geo, and ML can run independently or sequentially via `scripts/run_all.py`. Each phase reads from and writes to `data/processed/`.
+### Weather matters less than people think
 
-**Parquet over CSV.** Faster reads, smaller files, preserved dtypes. The feature matrix loads in under a second versus 10+ seconds from CSV.
+Fine, dry weather actually sees the **most collisions** — simply because more people drive in good conditions. The fatal *rate* does increase in fog and heavy rain, but the absolute numbers are smaller. The real danger isn't bad weather — it's darkness, speed, and isolation.
 
-**Leakage-aware preprocessing.** A dedicated `DROP_COLUMNS` list in the preprocessing module explicitly blocks target-derived columns. This is easy to audit and extend.
+### Vulnerable road users face the worst outcomes
 
-**Label mapping separation.** Human-readable labels live in a dedicated `mappings.py` module — a single source of truth used by cleaning, the dashboard, and the API.
-
----
-
-## What I'd Build Next
-
-1. **SHAP explanations** on each prediction — not just "Serious," but *why* the model thinks so.
-2. **Time-series forecasting** — predicting collision counts by region and week, not just individual severity.
-3. **Real-time ingestion** — connecting to live police incident feeds instead of annual CSV dumps.
-4. **A/B testing framework** for model versions in production.
-5. **Automated retraining** triggered by the drift detector.
+Motorcycle involvement significantly increases collision severity. Collisions involving heavy goods vehicles result in more casualties per incident. Elderly casualties face disproportionately severe outcomes. E-scooter-related collisions are a growing and concerning new category.
 
 ---
 
-## Try It Yourself
+## How the Hotspot Map Works
 
-The entire platform is open source. Clone it, run `python scripts/run_all.py`, and the full pipeline executes in minutes. Then launch the dashboard with `streamlit run src/dashboard/app.py` to explore the data interactively.
+Not every stretch of road is equally dangerous. Using geographic clustering, the platform identifies **collision hotspots** — locations where incidents cluster within a 500-metre radius.
 
-The prediction API starts with `uvicorn src.serving.app:app --reload` and accepts JSON requests at `/predict`.
+Each hotspot is scored and ranked using four factors:
+
+- **Fatality rate** — what proportion of collisions at this location are fatal
+- **Serious injury rate** — what proportion result in serious injuries
+- **Environmental danger** — how often collisions happen in dark, wet, or high-speed conditions
+- **Volume** — how many collisions occur at this location
+
+Hotspots are classified into four tiers: **Critical**, **High**, **Medium**, and **Low**. The top 100 most dangerous hotspots are plotted on an interactive map where stakeholders can zoom in, click on clusters, and see the risk profile for any location.
+
+### Who benefits from this?
+
+- **Local councils** can identify which roads in their jurisdiction need safety interventions
+- **Police forces** can see which hotspots fall within their area and how they compare nationally
+- **Transport planners** can prioritise infrastructure spending based on data, not assumptions
+- **Insurance companies** can better understand geographic risk concentrations
 
 ---
 
-**The code doesn't just analyze collisions — it builds the infrastructure to keep analyzing them as new data arrives.** That's the difference between a notebook and a platform, and it's where real MLOps begins.
+## The Prediction Tool: "What If" Scenario Planning
+
+The platform includes a severity prediction tool that answers a practical question: **given a specific set of conditions, how severe would a collision likely be?**
+
+Users select from dropdown menus and sliders:
+
+- **Road characteristics** — speed limit, road type, road class, urban or rural
+- **Environmental conditions** — lighting, weather, road surface, time of day, day of week
+- **Collision details** — number of vehicles, casualties, vehicle types involved
+- **People involved** — driver age, casualty age, vehicle age
+
+Hit "Predict" and the system returns:
+
+- A severity prediction: **Fatal**, **Serious**, or **Slight**
+- The probability for each outcome (e.g., 3% Fatal, 22% Serious, 75% Slight)
+- A list of identified risk factors in plain language (e.g., "High speed zone," "Dark conditions," "Rural area")
+
+### Why this matters for decision-makers
+
+This isn't about predicting individual crashes — it's about **scenario modelling**. A transport authority could ask:
+
+- *"If we reduce the speed limit on this rural road from 60mph to 40mph, how does the predicted severity change?"*
+- *"If we install street lighting on this unlit stretch, what's the impact on fatal collision probability?"*
+- *"Which combination of conditions produces the highest risk, and where do those conditions exist on our road network?"*
+
+The prediction tool turns data into a planning instrument.
 
 ---
 
-*Built with Python, scikit-learn, LightGBM, XGBoost, Optuna, DBSCAN, FastAPI, Streamlit, and Plotly. Data from the UK Department for Transport Road Casualty Statistics 2024.*
+## Four AI Models Tested — One Clear Winner
+
+I tested four different machine learning approaches to find the most reliable predictor:
+
+| Approach | Strengths |
+|----------|-----------|
+| **Logistic Regression** | Simple, fast, interpretable — used as a baseline |
+| **Random Forest** | Good overall accuracy, handles many variables well |
+| **XGBoost** | Strong performance on imbalanced data |
+| **LightGBM** | Best at detecting fatal collisions — the hardest and most important category |
+
+**LightGBM** was the clear winner, particularly for identifying fatal collisions. This matters because only ~2% of collisions are fatal — a naive model could achieve 98% "accuracy" by simply never predicting a fatal outcome. LightGBM is specifically better at catching these rare but critical events.
+
+The model was then fine-tuned through 50 rounds of automated optimisation to squeeze out maximum performance.
+
+### What drives the predictions?
+
+The top factors the model relies on:
+
+1. **Number of casualties** — more people involved means more severe outcomes
+2. **Speed limit** — higher speed limits strongly correlate with fatality
+3. **Casualty age** — elderly people face significantly worse outcomes
+4. **Vehicle size differences** — large engine capacity differences suggest car-vs-truck scenarios
+5. **Composite danger score** — a combined measure of darkness, weather, surface, speed, and rural location
+6. **Dark rural roads** — the interaction of these two factors is more dangerous than either alone
+
+These aren't black-box outputs — they align with what road safety experts already know, which gives confidence that the model is learning real patterns, not statistical noise.
+
+---
+
+## The Dashboard: Insights at Your Fingertips
+
+The platform is accessed through an interactive web dashboard with five sections:
+
+### Overview
+At-a-glance KPIs — total collisions, fatal count, serious injuries, total casualties. Plus charts showing how collisions distribute by hour, day of week, month, and speed limit. Everything updates instantly when you apply filters.
+
+### Hotspot Map
+Two interactive maps: one showing individual collisions colour-coded by severity (Fatal in red, Serious in orange, Slight in green), and one showing hotspot clusters sized by volume and coloured by risk tier.
+
+### Conditions Analysis
+Side-by-side comparisons of how fatal rates change across light conditions, weather, road surface, and overall danger score. Immediately reveals which environmental factors matter most.
+
+### Model Performance
+Transparent comparison of all four models tested, plus a visual breakdown of which features matter most for predictions.
+
+### Predict Severity
+The interactive scenario planning tool described above.
+
+### Sidebar Filters
+Every analytical page can be filtered by severity, urban/rural, month range, hour range, road class, speed limit, and weather. A counter shows how many records match your current selection.
+
+---
+
+## Built to Stay Current
+
+Road conditions change. New roads are built, speed limits are updated, traffic patterns shift after major developments. A one-time analysis becomes outdated quickly.
+
+This platform is designed to **keep working** as new data arrives:
+
+- **Automated monitoring** detects when incoming data starts looking different from what the model was trained on — a signal that the model may need updating
+- **Alert system** flags unusual prediction patterns, like a sudden spike in fatal predictions
+- **Automated testing** runs the entire pipeline on every update to ensure nothing breaks
+- The whole system can be **retrained in minutes** when new annual data is released by the DfT
+
+---
+
+## The Business Case
+
+### For Local Authorities and Transport Bodies
+- Evidence-based prioritisation of road safety interventions
+- Identify which specific roads and junctions in your area are the most dangerous
+- Model the impact of proposed changes (speed limits, lighting, road redesign) before spending
+
+### For Emergency Services
+- Allocate resources based on when and where the most *severe* incidents occur, not just the most *frequent*
+- Identify temporal patterns for shift planning
+
+### For Insurance Companies
+- Understand geographic and environmental risk concentrations
+- Improve risk assessment models with data-driven severity predictions
+
+### For Road Safety Researchers and Campaigners
+- Access to clear, visual evidence of which factors drive fatal outcomes
+- Data to support policy recommendations with quantified impact
+
+### For the Public
+- Transparent access to road safety data for their local area
+- Understanding of which conditions make driving most dangerous
+
+---
+
+## What's Next
+
+This platform is a foundation. Future enhancements could include:
+
+- **Plain-language explanations** for every prediction — not just "Serious," but specifically *why* the model thinks so
+- **Weekly forecasting** — predicting how many collisions to expect in each region next week
+- **Live data feeds** — connecting to real-time police incident reports instead of annual data releases
+- **Before-and-after analysis** — measuring whether a specific road intervention actually reduced severity
+
+---
+
+## The Bottom Line
+
+100,000 collisions a year aren't random. They follow patterns shaped by speed, darkness, road design, time of day, and location. This platform makes those patterns visible, quantifiable, and actionable.
+
+The data is already being collected. The question is whether we use it.
+
+---
+
+*Data source: UK Department for Transport — Road Casualty Statistics 2024. The platform is open source and available for councils, researchers, and organisations working on road safety.*
